@@ -2,19 +2,18 @@ package limiter
 
 import (
 	"github.com/go-redis/redis/v8"
-	limiter "github.com/ivanstanev/rate-limiter/internal"
+	memoryRateLimiter "github.com/ivanstanev/rate-limiter/internal/memory"
+	redisRateLimiter "github.com/ivanstanev/rate-limiter/internal/redis"
+	rateLimiter "github.com/ivanstanev/rate-limiter/limiter"
 )
 
-type RateLimiter interface {
-	ShouldLimit(key string) bool
-}
-
-func NewRedisRateLimiter(redisClient *redis.Client) RateLimiter {
-	return &limiter.RedisRateLimiter{
-		RedisClient: redisClient,
+func NewRedisRateLimiter(redisClient *redis.Client, config *rateLimiter.RateLimiterConfiguration) rateLimiter.RateLimiter {
+	return &redisRateLimiter.RedisRateLimiter{
+		RedisClient:   redisClient,
+		Configuration: config,
 	}
 }
 
-func NewInMemoryRateLimiter() RateLimiter {
-	return &limiter.InMemoryRateLimiter{}
+func NewInMemoryRateLimiter() rateLimiter.RateLimiter {
+	return &memoryRateLimiter.InMemoryRateLimiter{}
 }
