@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v8"
-	limiter "github.com/ivanstanev/rate-limiter"
-	rateLimiter "github.com/ivanstanev/rate-limiter/limiter"
+	"github.com/ivanstanev/rate-limiter/limiter"
+	redisRateLimiter "github.com/ivanstanev/rate-limiter/redis"
 )
 
 func main() {
@@ -15,17 +15,15 @@ func main() {
 		Password: "", // no password set
 		DB:       0,  // use default DB
 	})
-	rlConfig := &rateLimiter.RateLimiterConfiguration{
-		Window: rateLimiter.Window{
+	rlConfig := &limiter.Configuration{
+		Window: limiter.Window{
 			Tokens:      0,
 			RefreshRate: time.Minute,
 		},
 	}
-	rateLimiter := limiter.NewRedisRateLimiter(redisClient, rlConfig)
+	rl := redisRateLimiter.NewRateLimiter(redisClient, rlConfig)
 
-	// cancellationCtx := context.WithDeadline(context.TODO(), time.Now().Add(time.Second*5))
-
-	if rateLimiter.ShouldLimit("foo") {
+	if rl.ShouldLimit("foo") {
 		panic("Got rate limited!")
 	} else {
 		fmt.Println("Bye!")
