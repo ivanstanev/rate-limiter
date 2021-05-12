@@ -1,6 +1,8 @@
 package limiter
 
-import "time"
+import (
+	"time"
+)
 
 type RateLimiter interface {
 	ShouldLimit(key string) bool
@@ -11,6 +13,6 @@ type Window struct {
 	RefreshRate time.Duration `default:"1m"`
 }
 
-type RateLimiterConfiguration struct {
+type Configuration struct {
 	Window Window
 }
