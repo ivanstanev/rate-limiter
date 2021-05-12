@@ -9,8 +9,9 @@ import (
 
 func TestInMemoryRateLimiterShouldLimit(t *testing.T) {
 	rl := limiter.NewRateLimiter()
-	got := rl.ShouldLimit("Boo")
+	got, err := rl.ShouldLimit("Boo")
 	want := false
 
 	assert.Equal(t, want, got, "Rate limiting should not be applied")
+	assert.Nil(t, err, "Rate limiting should not have errors")
 }

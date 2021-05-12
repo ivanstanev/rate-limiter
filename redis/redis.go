@@ -3,6 +3,7 @@ package limiter
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -22,7 +23,7 @@ func NewRateLimiter(redisClient *redis.Client, config *limiter.Configuration) li
 	}
 }
 
-func (rl *RedisRateLimiter) ShouldLimit(key string) bool {
+func (rl *RedisRateLimiter) ShouldLimit(key string) (bool, error) {
 	currentWindow := getCurrentWindow(rl.Configuration)
 
 	keyPrefix := currentWindow.Format(time.Stamp)
@@ -30,24 +31,30 @@ func (rl *RedisRateLimiter) ShouldLimit(key string) bool {
 
 	getCtx, getCancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second))
 	defer getCancel()
-	val, err := rl.RedisClient.Get(getCtx, redisKey).Result()
 
+	tokens, err := rl.RedisClient.Get(getCtx, redisKey).Result()
 	if err == redis.Nil {
-		setCtx, setCancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second))
-		defer setCancel()
-		err = rl.RedisClient.Set(setCtx, redisKey, "1", rl.Configuration.Window.RefreshRate).Err()
-		if err != nil {
-			panic(err)
-		}
+		tokens = "0"
 	} else if err != nil {
-		panic(err)
+		return false, err
 	}
 
-	fmt.Println("redis value:", val)
-	if redisKey == "" {
-		return true
+	i, err := strconv.Atoi(tokens)
+	if err != nil {
+		return false, err
 	}
-	return false
+
+	setCtx, setCancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second))
+	defer setCancel()
+
+	newTokens := i + 1
+	err = rl.RedisClient.Set(setCtx, redisKey, strconv.Itoa(newTokens), rl.Configuration.Window.RefreshRate).Err()
+	if err != nil {
+		return false, err
+	}
+
+	shouldLimit := int64(newTokens) > int64(rl.Configuration.Window.Tokens)
+	return shouldLimit, nil
 }
 
 func getCurrentWindow(configuration *limiter.Configuration) time.Time {

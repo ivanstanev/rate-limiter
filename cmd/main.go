@@ -17,13 +17,13 @@ func main() {
 	})
 	rlConfig := &limiter.Configuration{
 		Window: limiter.Window{
-			Tokens:      0,
+			Tokens:      1,
 			RefreshRate: time.Minute,
 		},
 	}
 	rl := redisRateLimiter.NewRateLimiter(redisClient, rlConfig)
 
-	if rl.ShouldLimit("foo") {
+	if shouldLimit, err := rl.ShouldLimit("foo"); shouldLimit && err != nil {
 		panic("Got rate limited!")
 	} else {
 		fmt.Println("Bye!")
