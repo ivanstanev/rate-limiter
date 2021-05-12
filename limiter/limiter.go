@@ -5,7 +5,7 @@ import (
 )
 
 type RateLimiter interface {
-	ShouldLimit(key string) bool
+	ShouldLimit(key string) (bool, error)
 }
 
 type Window struct {
