@@ -5,14 +5,25 @@ import (
 )
 
 type RateLimiter interface {
+	Evaluate(key string) (Calculation, error)
 	ShouldLimit(key string) (bool, error)
 }
 
-type Window struct {
-	Tokens      uint          `default:"10"`
-	RefreshRate time.Duration `default:"1m"`
+type Calculation struct {
+	ShouldLimit bool
+	RetryAfter  time.Duration
 }
 
-type Configuration struct {
-	Window Window
+type Algorithm interface {
+	Configuration
+}
+
+type Backend interface {
+	Set(key string, value int, expiration time.Duration) error
+	Get(key string) (int, error)
+}
+
+type Configuration interface {
+	GetTokens() int
+	GetRefreshRate() time.Duration
 }

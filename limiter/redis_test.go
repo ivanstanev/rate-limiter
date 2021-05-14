@@ -6,8 +6,9 @@ import (
 
 	miniredis "github.com/alicebob/miniredis/v2"
 	"github.com/go-redis/redis/v8"
-	limiter "github.com/ivanstanev/rate-limiter/limiter"
-	redisRateLimiter "github.com/ivanstanev/rate-limiter/redis"
+	"github.com/ivanstanev/rate-limiter/algorithm"
+	"github.com/ivanstanev/rate-limiter/backend"
+	"github.com/ivanstanev/rate-limiter/limiter"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -22,43 +23,37 @@ func TestRedisRateLimiterShouldLimit(t *testing.T) {
 	})
 
 	t.Run("when within limits", func(t *testing.T) {
-		config := &limiter.Configuration{
-			Window: limiter.Window{
-				Tokens:      1,
-				RefreshRate: time.Minute,
-			},
-		}
+		algorithm := algorithm.NewFixedWindowCounter(1, time.Minute)
+		backend := backend.NewRedisBackend(client)
+		rl := limiter.NewRedisRateLimiter(algorithm, backend)
 
-		rl := redisRateLimiter.NewRateLimiter(client, config)
-		got, err := rl.ShouldLimit("Boo")
+		calc, err := rl.Evaluate("Boo")
+		got := calc.ShouldLimit
 		want := false
-
 		assert.Equal(t, want, got, "Rate limiting should not be applied")
 		assert.Nil(t, err, "Rate limiting should not have errors")
 	})
 
 	t.Run("when exceeding limits", func(t *testing.T) {
-		config := &limiter.Configuration{
-			Window: limiter.Window{
-				Tokens:      1,
-				RefreshRate: time.Minute,
-			},
-		}
+		algorithm := algorithm.NewFixedWindowCounter(1, time.Minute)
+		backend := backend.NewRedisBackend(client)
+		rl := limiter.NewRedisRateLimiter(algorithm, backend)
 
-		rl := redisRateLimiter.NewRateLimiter(client, config)
-		got, err := rl.ShouldLimit("Far")
+		calc, err := rl.Evaluate("Far")
+		got := calc.ShouldLimit
 		want := false
 		assert.Equal(t, want, got, "Rate limiting should not be applied")
 		assert.Nil(t, err, "Rate limiting should not have errors")
 
-		got, err = rl.ShouldLimit("Far")
+		calc, err = rl.Evaluate("Far")
+		got = calc.ShouldLimit
 		want = true
 		assert.Equal(t, want, got, "Rate limiting should be applied")
 		assert.Nil(t, err, "Rate limiting should not have errors")
 	})
 }
 
-var result bool
+var calculation limiter.Calculation
 
 func BenchmarkRedisRateLimiterShouldLimit(t *testing.B) {
 	miniredis, err := miniredis.Run()
@@ -69,20 +64,16 @@ func BenchmarkRedisRateLimiterShouldLimit(t *testing.B) {
 		Addr: miniredis.Addr(),
 	})
 
-	var res bool
+	var calc limiter.Calculation
 	t.Run("performance", func(t *testing.B) {
-		config := &limiter.Configuration{
-			Window: limiter.Window{
-				Tokens:      uint(t.N),
-				RefreshRate: time.Minute,
-			},
-		}
-		rl := redisRateLimiter.NewRateLimiter(client, config)
+		algorithm := algorithm.NewFixedWindowCounter(t.N, time.Minute)
+		backend := backend.NewRedisBackend(client)
+		rl := limiter.NewRedisRateLimiter(algorithm, backend)
 
 		for i := 0; i < t.N; i++ {
-			res, _ = rl.ShouldLimit("")
+			calc, _ = rl.Evaluate("")
 		}
 
-		result = res
+		calculation = calc
 	})
 }
