@@ -25,30 +25,24 @@ func TestRedisRateLimiterShouldLimit(t *testing.T) {
 	t.Run("when within limits", func(t *testing.T) {
 		algorithm := algorithm.NewFixedWindowCounter(1, time.Minute)
 		backend := backend.NewRedisBackend(client)
-		rl := limiter.NewRedisRateLimiter(algorithm, backend)
+		rl := limiter.New(algorithm, backend)
 
 		calc, err := rl.Evaluate("Boo")
-		got := calc.ShouldLimit
-		want := false
-		assert.Equal(t, want, got, "Rate limiting should not be applied")
+		assert.Equal(t, false, calc.ShouldLimit, "Rate limiting should not be applied")
 		assert.Nil(t, err, "Rate limiting should not have errors")
 	})
 
 	t.Run("when exceeding limits", func(t *testing.T) {
 		algorithm := algorithm.NewFixedWindowCounter(1, time.Minute)
 		backend := backend.NewRedisBackend(client)
-		rl := limiter.NewRedisRateLimiter(algorithm, backend)
+		rl := limiter.New(algorithm, backend)
 
 		calc, err := rl.Evaluate("Far")
-		got := calc.ShouldLimit
-		want := false
-		assert.Equal(t, want, got, "Rate limiting should not be applied")
+		assert.Equal(t, false, calc.ShouldLimit, "Rate limiting should not be applied")
 		assert.Nil(t, err, "Rate limiting should not have errors")
 
 		calc, err = rl.Evaluate("Far")
-		got = calc.ShouldLimit
-		want = true
-		assert.Equal(t, want, got, "Rate limiting should be applied")
+		assert.Equal(t, true, calc.ShouldLimit, "Rate limiting should be applied")
 		assert.Nil(t, err, "Rate limiting should not have errors")
 	})
 }
@@ -68,10 +62,10 @@ func BenchmarkRedisRateLimiterShouldLimit(t *testing.B) {
 	t.Run("performance", func(t *testing.B) {
 		algorithm := algorithm.NewFixedWindowCounter(t.N, time.Minute)
 		backend := backend.NewRedisBackend(client)
-		rl := limiter.NewRedisRateLimiter(algorithm, backend)
+		rl := limiter.New(algorithm, backend)
 
 		for i := 0; i < t.N; i++ {
-			calc, _ = rl.Evaluate("")
+			calc, _ = rl.Evaluate("something")
 		}
 
 		calculation = calc
