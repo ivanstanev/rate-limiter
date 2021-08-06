@@ -16,11 +16,23 @@ func main() {
 	})
 	algorithm := algorithm.NewFixedWindowCounter(1, time.Minute)
 	backend := backend.NewRedisBackend(redisClient)
-	rl := limiter.NewRedisRateLimiter(algorithm, backend)
+	rl := limiter.New(algorithm, backend)
 
-	if shouldLimit, err := rl.ShouldLimit("foo"); shouldLimit && err != nil {
-		panic("Got rate limited!")
-	} else {
-		fmt.Println("Bye!")
+	shouldLimit, err := rl.ShouldLimit("foo")
+	if err != nil {
+		panic(err)
 	}
+	if shouldLimit {
+		panic("should not have limited")
+	}
+
+	shouldLimit, err = rl.ShouldLimit("foo")
+	if err != nil {
+		panic(err)
+	}
+	if !shouldLimit {
+		panic("should have limited")
+	}
+
+	fmt.Println("all good, bye!")
 }

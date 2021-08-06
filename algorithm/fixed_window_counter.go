@@ -13,7 +13,7 @@ type FixedWindowCounter struct {
 	refreshRate time.Duration
 }
 
-func NewFixedWindowCounter(tokens int, refreshRate time.Duration) *FixedWindowCounter {
+func NewFixedWindowCounter(tokens int, refreshRate time.Duration) limiter.Algorithm {
 	return &FixedWindowCounter{
 		tokens:      tokens,
 		refreshRate: refreshRate,
